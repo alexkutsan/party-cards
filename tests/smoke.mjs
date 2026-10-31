@@ -66,22 +66,27 @@ async function openHome() {
   drain('home');
 }
 
-async function passAgeGate(confirm) {
-  const gate = page.locator('[data-act="gate"]');
+async function passAgeGate(confirm, which = 'x18') {
+  const xx = which === 'xx';
+  const gate = page.locator(xx ? '[data-act="gate-xx"]' : '[data-act="gate"]');
   await gate.scrollIntoViewIfNeeded();
   await gate.click();
-  const yes = page.locator('[data-act="age-yes"]');
+  const yes = page.locator(xx ? '[data-act="xx-yes"]' : '[data-act="age-yes"]');
   await yes.waitFor();
   const box = await yes.boundingBox();
   const vh = page.viewportSize().height;
   if (!box || box.height < 40 || box.y < 0 || box.y + box.height > vh + 1) {
-    fail('18+ confirmation is not visible in the viewport: ' + JSON.stringify(box));
+    fail(which + ' confirmation is not visible in the viewport: ' + JSON.stringify(box));
   }
   const position = await page.locator('#modal').evaluate((el) => getComputedStyle(el).position);
-  if (position !== 'fixed') fail('18+ confirmation is not an overlay (position: ' + position + ')');
-  await (confirm ? yes : page.locator('[data-act="age-no"]')).click();
+  if (position !== 'fixed') fail(which + ' confirmation is not an overlay (position: ' + position + ')');
+  if (xx) {
+    const text = await page.locator('#modal').innerText();
+    if (!text.includes('Extreme') || !text.includes('Красный')) fail('extreme gate text missing');
+  }
+  await (confirm ? yes : page.locator(xx ? '[data-act="xx-no"]' : '[data-act="age-no"]')).click();
   await page.locator('#modal').waitFor({ state: 'hidden' });
-  drain('age gate');
+  drain('age gate ' + which);
 }
 
 function gameList(party) {
@@ -124,7 +129,8 @@ async function openCard(url, game) {
         text: el.querySelector('div')?.textContent || ''
       }));
       const labels = slots.map((s) => s.label);
-      const expect = bits.length === 4 ? ['Кто → кому', 'Что', 'Где', 'Как и сколько'] : ['Что', 'Где', 'Как и сколько'];
+      const howLabel = (PARTY.cards[ids[2]] && PARTY.cards[ids[2]].d.includes('сколько')) ? 'Как и сколько' : 'Как';
+      const expect = bits.length === 4 ? ['Кто → кому', 'Что', 'Где', howLabel] : ['Что', 'Где', howLabel];
       if (labels.join('|') !== expect.join('|')) return 'combo labels ' + labels.join('|');
       const offset = bits.length === 4 ? 1 : 0;
       for (let i = 0; i < 3; i++) {
@@ -135,14 +141,18 @@ async function openCard(url, game) {
     return '';
   }, game.id);
   if (check) fail(`${game.id} ${url}: ${check}`);
+  if (game.sec === 'xx') {
+    const foot = await page.locator('.foot').innerText();
+    if (!foot.includes('Красный')) fail(game.id + ' card missing stop-word Красный');
+  }
   drain('deep link ' + game.id);
 }
 
 async function playGame(game) {
   await openHome();
-  if (game.sec === 'x18' && await page.locator('[data-act="gate"]').count()) {
-    if (await page.locator(`[data-go="g/${game.id}"]`).count()) fail(game.id + ' is visible before 18+ confirmation');
-    await passAgeGate(true);
+  if ((game.sec === 'x18' || game.sec === 'xx') && await page.locator(game.sec === 'xx' ? '[data-act="gate-xx"]' : '[data-act="gate"]').count()) {
+    if (await page.locator(`[data-go="g/${game.id}"]`).count()) fail(game.id + ' is visible before confirmation');
+    await passAgeGate(true, game.sec);
   }
   const tile = page.locator(`[data-go="g/${game.id}"]`);
   await tile.scrollIntoViewIfNeeded();
@@ -156,6 +166,15 @@ async function playGame(game) {
     return h1 === g.short && body.length > 40;
   }, game.id);
   if (!rulesOk) fail(game.id + ' rules screen is wrong');
+  if (game.sec === 'xx' && !globalThis.__xxBefore) {
+    await page.locator('[data-go="s/xx"]').click();
+    await page.locator('[data-screen="section"]').waitFor();
+    const prep = await page.locator('.md').innerText();
+    if (!prep.includes('Красный') || !prep.includes('Забота')) fail('extreme before/aftercare page');
+    await page.locator('.back').click();
+    await page.locator('[data-screen="rules"]').waitFor();
+    globalThis.__xxBefore = true;
+  }
   drain(game.id + ' rules');
 
   await page.locator(`[data-go="p/${game.id}"], [data-go="game/${game.id}"]`).click();
@@ -275,26 +294,21 @@ async function assertBottleFinale() {
 }
 
 async function assertBanditLinks(game) {
-  const links = await page.evaluate(() => {
-    const g = PARTY.sections.flatMap((s) => s.games).find((x) => x.mode === 'bandit');
+  const links = await page.evaluate((gid) => {
+    const g = PARTY.sections.flatMap((s) => s.games).find((x) => x.id === gid);
     const cards = (prefix) => g.decks.filter((d) => d.name.startsWith(prefix)).flatMap((d) => d.cards.map((id) => PARTY.cards[id]));
-    const what = cards('Бандит — Что');
-    const where = cards('Бандит — Где');
-    const how = cards('Бандит — Как');
-    const pick = (list, pred) => list.find(pred);
-    const oldWhat = pick(what, (c) => c.n === 1);
-    const newWhat = pick(what, (c) => c.n === 96);
-    const oldWhere = pick(where, (c) => c.n < 96);
-    const newWhere = pick(where, (c) => c.n >= 126);
-    const oldHow = pick(how, (c) => c.n < 96);
-    const newHow = pick(how, (c) => c.n >= 134);
-    if (!oldWhat || !newWhat || !oldWhere || !newWhere || !oldHow || !newHow) return null;
+    const byN = (list) => list.slice().sort((a, b) => a.n - b.n);
+    const what = byN(cards('Бандит — Что'));
+    const where = byN(cards('Бандит — Где'));
+    const how = byN(cards('Бандит — Как'));
+    if (!what.length || !where.length || !how.length) return null;
+    const pack = (w, d, h) => `m/${w.id}~${d.id}~${h.id}`;
     return {
-      old: `m/${oldWhat.id}~${oldWhere.id}~${oldHow.id}`,
-      neu: `m/${newWhat.id}~${newWhere.id}~${newHow.id}~2-5`
+      old: pack(what[0], where[0], how[0]),
+      neu: pack(what[what.length - 1], where[where.length - 1], how[how.length - 1]) + '~2-5'
     };
-  });
-  if (!links) fail('could not build bandit combination samples');
+  }, game.id);
+  if (!links) fail('could not build bandit combination samples for ' + game.id);
   await openCard(new URL(links.old, ROOT).href, game);
   await openCard(new URL(links.neu, ROOT).href, game);
 }
@@ -302,19 +316,20 @@ async function assertBanditLinks(game) {
 async function assertScore(game) {
   if (!await page.locator('[data-sum="open-set"]').count()) fail('score host has no sets');
   const sets = await page.locator('[data-sum="open-set"]').count();
-  if (sets !== 10) fail('expected 10 sets, got ' + sets);
-  const weightsOk = await page.evaluate(() => {
+  const weightsOk = await page.evaluate((shown) => {
     const sc = PARTY.score;
-    if (sc.pool.length !== 30) return 'pool ' + sc.pool.length;
+    if (shown !== sc.sets.length) return 'shown ' + shown + ' != ' + sc.sets.length;
+    if (sc.sets.length < 13) return 'sets ' + sc.sets.length;
+    if (sc.pool.length < 40) return 'pool ' + sc.pool.length;
     const tally = {1: 0, 2: 0, 3: 0};
     sc.pool.forEach((id) => { tally[sc.questions[id].w]++; });
-    if (tally[1] !== 10 || tally[2] !== 10 || tally[3] !== 10) return 'pool weights';
+    if (tally[1] < 2 || tally[2] < 2 || tally[3] < 2) return 'pool weights';
     for (const set of sc.sets) {
       const w = set.qs.map((id) => sc.questions[id].w);
       if (w.join() !== '1,1,2,2,3,3') return 'set ' + set.n;
     }
     return '';
-  });
+  }, sets);
   if (weightsOk) fail(weightsOk);
   await page.locator('[data-sum="open-set"]').first().click();
   await page.locator('#sumQr').waitFor();
@@ -407,22 +422,32 @@ if (host !== 'localhost' && host !== '127.0.0.1') {
   drain('service worker');
 }
 const party = await page.evaluate(() => window.PARTY);
-if (!party || party.sections.length !== 3) fail('expected 3 categories');
+if (!party || party.sections.length !== 4) fail('expected 4 categories');
 const games = gameList(party);
-if (games.length !== 16) fail('expected 16 games, got ' + games.length);
-const adult = games.filter((g) => g.sec === 'x18');
-const rest = games.filter((g) => g.sec !== 'x18');
-if (adult.length !== 6) fail('expected 6 games in Финал 18+');
+if (games.length !== 21) fail('expected 21 games, got ' + games.length);
+const x18 = games.filter((g) => g.sec === 'x18');
+const extreme = games.filter((g) => g.sec === 'xx');
+const rest = games.filter((g) => g.sec !== 'x18' && g.sec !== 'xx');
+if (x18.length !== 6) fail('expected 6 games in Финал 18+');
+if (extreme.length !== 5) fail('expected 5 Extreme games, got ' + extreme.length);
 if (await page.locator('[data-go="g/x181"]').count()) fail('18+ games are listed before confirmation');
 if (await page.locator('[data-go="g/summa"]').count()) fail('Сумма и ставки is listed before confirmation');
+if (await page.locator('[data-go="g/xx1"]').count()) fail('Extreme games are listed before confirmation');
+if (!await page.locator('[data-act="gate-xx"]').count()) fail('Extreme gate tile missing');
 if (!await page.locator('[data-go="g/deep1"]').count()) fail('first category did not render');
 await passAgeGate(false);
 if (await page.locator('[data-go="g/x181"]').count()) fail('declining 18+ revealed the category');
 
 for (const game of rest) await playGame(game);
-for (const game of adult) await playGame(game);
-await assertBanditLinks(adult.find((g) => g.id === 'x185'));
+for (const game of x18) await playGame(game);
+await openHome();
+if (await page.locator('[data-go="g/xx1"]').count()) fail('Extreme opened with only the 18+ gate');
+await passAgeGate(false, 'xx');
+if (await page.locator('[data-go="g/xx1"]').count()) fail('declining Extreme revealed the category');
+for (const game of extreme) await playGame(game);
+await assertBanditLinks(x18.find((g) => g.id === 'x185'));
+await assertBanditLinks(extreme.find((g) => g.mode === 'bandit'));
 
 drain('end');
 await browser.close();
-console.log(`SMOKE OK base=${ROOT} categories=3 games=${games.length} adult=${adult.length}`);
+console.log(`SMOKE OK base=${ROOT} categories=${party.sections.length} games=${games.length} x18=${x18.length} extreme=${extreme.length}`);

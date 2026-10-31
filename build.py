@@ -22,6 +22,7 @@ FILES = [
     ("1_uznat_glubzhe.md", "deep", "Узнать глубже", "💬"),
     ("2_posmeyatsya.md", "fun", "Посмеяться", "😂"),
     ("3_final_18.md", "x18", "Финал 18+", "🔥"),
+    ("5_extreme.md", "xx", "Extreme", "⛓️"),
 ]
 ID_SALT = "party-cards-v1"
 
@@ -119,7 +120,7 @@ def parse_file(fn: str, sid: str, stitle: str, icon: str) -> tuple[dict, list[st
                 "rules": rules,
                 "decks": decks,
             }
-            if sid == "x18" and any(d["name"].startswith("Бандит") for d in decks):
+            if sid in ("x18", "xx") and any(d["name"].startswith("Бандит") for d in decks):
                 game["mode"] = "bandit"
                 names = [d["name"] for d in decks]
                 for prefix in ("Бандит — Что", "Бандит — Где", "Бандит — Как", "Колесо"):
@@ -222,10 +223,10 @@ def parse_summa(cards: dict[str, dict]) -> tuple[dict, list[str]]:
         elif first.strip():
             errors.append(f"{fn}: unknown block {first}")
 
-    if len(sets) != 10:
-        errors.append(f"{fn}: expected 10 sets, got {len(sets)}")
-    if len(pool_ids) != 30:
-        errors.append(f"{fn}: expected 30 pool questions, got {len(pool_ids)}")
+    if len(sets) < 10:
+        errors.append(f"{fn}: expected at least 10 sets, got {len(sets)}")
+    if len(pool_ids) < 30:
+        errors.append(f"{fn}: expected at least 30 pool questions, got {len(pool_ids)}")
     for w in (1, 2, 3):
         count = sum(1 for i in pool_ids if questions[i]["w"] == w)
         if count < 2:

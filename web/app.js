@@ -12,7 +12,8 @@
   const LVN = {
     deep: {'🟢': 'легко', '🟡': 'лично', '🔴': 'глубоко'},
     fun: {'🟢': 'для всех', '🟡': 'с перчинкой', '🔴': 'острее'},
-    x18: {'🟡': 'чувственно', '🔴': 'тело', '🔥': 'откровенно', '💞': 'групповое'}
+    x18: {'🟡': 'чувственно', '🔴': 'тело', '🔥': 'откровенно', '💞': 'групповое'},
+    xx: {'🔴': 'голые', '🔥': 'секс и кинк', '💞': 'группа'}
   };
 
   const GAMES = {};
@@ -136,7 +137,13 @@
       try { localStorage.setItem('pc1_' + k, JSON.stringify(v)); } catch (e) {}
     }
   };
-  const ageOK = () => sessionStorage.getItem('pc_age') === '1';
+  const ADULT = new Set(['x18', 'xx']);
+  function ageOK(sec) {
+    if (sec === 'xx') {
+      try { return localStorage.getItem('ageOk_xx') === '1'; } catch (e) { return false; }
+    }
+    return sessionStorage.getItem('pc_age') === '1';
+  }
 
   function defaultState(g) {
     if (g.mode === 'bandit') return {drawn: [], bandit: 'bandit', levels: null, players: 0, last: null};
@@ -229,9 +236,9 @@
     return {name: 'missing'};
   }
   function needsAge(route) {
-    if (route.name === 'section' && route.id === 'x18') return true;
-    if ((route.name === 'rules' || route.name === 'play') && GAMES[route.id] && GAMES[route.id].sec === 'x18') return true;
-    return false;
+    if (route.name === 'section' && ADULT.has(route.id)) return route.id;
+    if ((route.name === 'rules' || route.name === 'play') && GAMES[route.id] && ADULT.has(GAMES[route.id].sec)) return GAMES[route.id].sec;
+    return '';
   }
 
   function go(route) {
@@ -257,18 +264,25 @@
     m.dataset.kind = '';
     m.innerHTML = '';
   }
-  function showGate() {
+  function showGate(kind) {
+    const xx = kind === 'xx';
     const m = $('#modal');
-    if (!m.hidden && m.dataset.kind === 'gate') return;
+    const id = xx ? 'gate-xx' : 'gate';
+    if (!m.hidden && m.dataset.kind === id) return;
     m.hidden = false;
-    m.dataset.kind = 'gate';
-    m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    m.dataset.kind = id;
+    m.innerHTML = xx ? `<div class="box box-xx" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+      <h3 id="gateTitle">Extreme — только для взрослых 18+</h3>
+      <p>Здесь полная нагота, оральный секс и проникновение, БДСМ, групповой секс и обмен партнёрами. Всё только по взаимному добровольному согласию. Без насилия, без принуждения, никаких несовершеннолетних. Стоп-слово «Красный» останавливает всё сразу. Любой может в любой момент стать зрителем.</p>
+      <button type="button" class="btn" data-act="xx-yes">Мне есть 18, все в комнате согласны</button>
+      <button type="button" class="btn ghost" data-act="xx-no">Назад</button>
+    </div>` : `<div class="box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
       <h3 id="gateTitle">Вам есть 18?</h3>
       <p>Раздел для взрослых, которые заранее и добровольно договорились об откровенной игре.</p>
       <button type="button" class="btn" data-act="age-yes">Да, мне есть 18 и я в игре</button>
       <button type="button" class="btn ghost" data-act="age-no">Нет, назад</button>
     </div>`;
-    m.querySelector('[data-act="age-yes"]').focus();
+    m.querySelector(xx ? '[data-act="xx-yes"]' : '[data-act="age-yes"]').focus();
   }
   function ask(title, text, ok, cancel) {
     return new Promise((resolve) => {
@@ -404,19 +418,27 @@
     document.title = 'Игры для компании';
     let h = `<div class="top"><h1>Игры для компании</h1></div><div class="wrap"><div class="hero"><p class="eyebrow">Ведущий</p><h2>Во что играем?</h2><p>Телефон ведущего показывает QR-код. Карточку читает только тот, кто её отсканировал.</p></div>`;
     DATA.sections.forEach((s) => {
-      const x = s.id === 'x18';
-      h += `<div class="sec">${s.icon} ${esc(s.title)} <small>${s.games.length} ${plural(s.games.length, 'игра', 'игры', 'игр')}</small></div>`;
-      if (x && !ageOK()) {
-        h += `<button type="button" class="tile lock" data-act="gate"><div class="ic">🔞</div><div><b>Только для взрослых</b><span>Нажмите, чтобы подтвердить 18+</span></div></button>`;
+      const adult = ADULT.has(s.id);
+      const xx = s.id === 'xx';
+      h += `<div class="sec${xx ? ' sec-xx' : ''}">${s.icon} ${esc(s.title)} <small>${s.games.length} ${plural(s.games.length, 'игра', 'игры', 'игр')}</small></div>`;
+      if (adult && !ageOK(s.id)) {
+        if (xx) {
+          h += `<button type="button" class="tile lock xx" data-act="gate-xx"><div class="ic">⛓️</div><div><b>Extreme — отдельное согласие</b><span>Нагота, секс, БДСМ, группа. Стоп-слово «Красный».</span></div></button>`;
+        } else {
+          h += `<button type="button" class="tile lock" data-act="gate"><div class="ic">🔞</div><div><b>Только для взрослых</b><span>Нажмите, чтобы подтвердить 18+</span></div></button>`;
+        }
         return;
       }
       if (s.intro || (s.info && s.info.length) || s.before) {
-        h += `<button type="button" class="tile info" data-act="go" data-go="s/${s.id}"><div class="ic">${x ? '⚠️' : '📖'}</div><div><b>${x ? 'Перед игрой' : 'Как пользоваться'}</b><span>${x ? 'согласие, калибровка, сигналы' : 'вступление и сценарий вечера'}</span></div></button>`;
+        const infoTitle = xx ? 'Перед игрой' : (s.id === 'x18' ? 'Перед игрой' : 'Как пользоваться');
+        const infoSub = xx ? 'стоп-слово «Красный», согласие, защита' : (s.id === 'x18' ? 'согласие, калибровка, сигналы' : 'вступление и сценарий вечера');
+        h += `<button type="button" class="tile info ${xx ? 'xx' : ''}" data-act="go" data-go="s/${s.id}"><div class="ic">${adult ? '⚠️' : '📖'}</div><div><b>${infoTitle}</b><span>${infoSub}</span></div></button>`;
       }
       s.games.forEach((g) => {
         const n = g.decks.reduce((a, d) => a + d.cards.length, 0);
-        const sub = g.mode === 'score' ? '10 наборов · счётчик на телефоне' : (n ? n + ' ' + plural(n, 'карточка', 'карточки', 'карточек') : 'только правила');
-        h += `<button type="button" class="tile ${x ? 'x18' : ''}" data-act="go" data-go="g/${g.id}"><div class="ic">${s.icon}</div><div><b>${esc(g.short)}</b><span>${sub}</span></div></button>`;
+        const sub = g.mode === 'score' ? `${(g.sets || []).length} наборов · счётчик на телефоне` : (n ? n + ' ' + plural(n, 'карточка', 'карточки', 'карточек') : 'только правила');
+        const tone = xx ? 'xx' : (s.id === 'x18' ? 'x18' : '');
+        h += `<button type="button" class="tile ${tone}" data-act="go" data-go="g/${g.id}"><div class="ic">${s.icon}</div><div><b>${esc(g.short)}</b><span>${sub}</span></div></button>`;
       });
     });
     app.innerHTML = h + '</div>';
@@ -424,8 +446,8 @@
   }
 
   function renderSection(s) {
-    document.title = s.id === 'x18' ? 'Перед игрой' : s.title;
-    let h = bar(s.id === 'x18' ? 'Перед игрой' : s.title, '') + '<div class="wrap md">';
+    document.title = ADULT.has(s.id) ? 'Перед игрой' : s.title;
+    let h = bar(ADULT.has(s.id) ? 'Перед игрой' : s.title, '') + '<div class="wrap md">';
     h += `<h3>${esc(s.full)}</h3>` + md(s.intro);
     if (s.before) h += `<h3>${esc(s.before.title)}</h3>` + md(s.before.md);
     (s.info || []).forEach((i) => { h += `<hr><h3>${esc(i.title)}</h3>` + md(i.md); });
@@ -437,8 +459,9 @@
     document.title = g.short;
     const n = g.decks.reduce((a, d) => a + d.cards.length, 0);
     let h = bar(g.short, '') + `<div class="wrap md"><h3 style="margin-top:4px">${esc(g.title)}</h3>` + md(g.rules);
-    if (g.sec === 'x18') {
-      h += `<p><button type="button" class="chip" data-act="go" data-go="s/x18">⚠️ Перед игрой: согласие и сигналы</button></p>`;
+    if (ADULT.has(g.sec)) {
+      const label = g.sec === 'xx' ? '⚠️ Перед игрой: стоп-слово, согласие, защита' : '⚠️ Перед игрой: согласие и сигналы';
+      h += `<p><button type="button" class="chip" data-act="go" data-go="s/${g.sec}">${label}</button></p>`;
     }
     if (g.mode === 'score') h += '<p class="muted">10 готовых наборов и пул для случайного. На телефоне игрока — счётчик, не текст ответов.</p>';
     else if (n) h += `<p class="muted">Колоды: ${g.decks.map((d) => esc(d.name) + ' (' + d.cards.length + ')').join(' · ')}</p>`;
@@ -464,7 +487,8 @@
     let h = bar(g.short, 'g/' + g.id) + '<div class="wrap">';
     if (g.mode === 'bandit') {
       h += '<div class="lbl">Режим</div><div class="chips">';
-      [['bandit', 'Однорукий бандит'], ['wheel', 'Колесо желаний']].forEach(([k, t]) => {
+      const wheelName = g.decks.some((d) => d.name.startsWith('Колесо кинков')) ? 'Колесо кинков' : 'Колесо желаний';
+      [['bandit', 'Однорукий бандит'], ['wheel', wheelName]].forEach(([k, t]) => {
         h += `<button type="button" class="chip ${s.bandit === k ? 'on' : ''}" data-act="mode" data-id="${g.id}" data-mode="${k}" aria-pressed="${s.bandit === k}">${k === 'bandit' ? '🎰' : '🎡'} ${t}</button>`;
       });
       h += '</div>';
@@ -510,6 +534,12 @@
     app.dataset.screen = 'play';
   }
 
+  function safetyFoot(g) {
+    if (!g) return '';
+    if (g.sec === 'x18') return '<p class="foot">Можно сказать «нет». Стоп-слово — «Ананас».</p>';
+    if (g.sec === 'xx') return '<p class="foot">Перед раундом: «ты в игре?» Стоп-слово — «Красный». Защита обязательна.</p>';
+    return '';
+  }
   function playerShell(gameName, inner, foot) {
     return `<div class="player"><div class="player-top"><div class="gname">${esc(gameName || 'Карточка')}</div></div><div class="player-body">${inner}</div>${foot || ''}</div>`;
   }
@@ -518,7 +548,7 @@
     document.title = g ? g.short : 'Карточка';
     const meta = [card.d, card.n ? '№' + card.n : ''].filter(Boolean).join(' · ');
     const body = `<div class="submeta">${esc(meta)}</div><div class="ctext ${card.t.length > 110 ? 'long' : ''}">${esc(card.t)}</div>`;
-    const foot = g && g.sec === 'x18' ? '<p class="foot">Можно сказать «нет». Стоп-слово — «Ананас».</p>' : '';
+    const foot = safetyFoot(g);
     app.innerHTML = playerShell(g && g.short, body, foot);
     app.dataset.screen = 'card';
   }
@@ -534,8 +564,9 @@
     }
     body += `<div class="slot"><small>Что</small><div>${esc(what.t)}</div></div>`;
     body += `<div class="slot"><small>Где</small><div>${esc(where.t)}</div></div>`;
-    body += `<div class="slot"><small>Как и сколько</small><div>${esc(how.t)}</div></div>`;
-    const foot = '<p class="foot">Только после «да» обоих. Стоп-слово — «Ананас».</p>';
+    const howLabel = how.d.includes('сколько') ? 'Как и сколько' : 'Как';
+    body += `<div class="slot"><small>${howLabel}</small><div>${esc(how.t)}</div></div>`;
+    const foot = `<p class="foot">Только после «да» обоих. ${g && g.sec === 'xx' ? 'Стоп-слово — «Красный». Защита обязательна.' : 'Стоп-слово — «Ананас».'}</p>`;
     app.innerHTML = playerShell(g && g.short, body, foot);
     app.dataset.screen = 'combo';
   }
@@ -564,9 +595,10 @@
   function render() {
     app.inert = false;
     const route = parse();
-    if (needsAge(route) && !ageOK()) {
+    const gate = needsAge(route);
+    if (gate && !ageOK(gate)) {
       renderHome();
-      showGate();
+      showGate(gate);
       return;
     }
     if (route.name === 'home') return renderHome();
@@ -681,7 +713,7 @@
     if (e.target.id === 'modal') {
       const kind = e.target.dataset.kind;
       if (kind === 'ask') resolveAsk(false);
-      if (kind === 'gate') { closeModal(); if (needsAge(parse())) go(''); }
+      if (kind === 'gate' || kind === 'gate-xx') { closeModal(); if (needsAge(parse())) go(''); }
       return;
     }
     if (!el) return;
@@ -692,9 +724,12 @@
       else go(el.dataset.fallback || '');
       return;
     }
-    if (act === 'gate') return showGate();
+    if (act === 'gate') return showGate('x18');
+    if (act === 'gate-xx') return showGate('xx');
     if (act === 'age-yes') { sessionStorage.setItem('pc_age', '1'); closeModal(); render(); return; }
     if (act === 'age-no') { closeModal(); if (needsAge(parse())) go(''); return; }
+    if (act === 'xx-yes') { try { localStorage.setItem('ageOk_xx', '1'); } catch (err) {} closeModal(); render(); return; }
+    if (act === 'xx-no') { closeModal(); if (needsAge(parse())) go(''); return; }
     if (act === 'ask-yes') return resolveAsk(true);
     if (act === 'ask-no') return resolveAsk(false);
     if (act === 'draw') return draw(el.dataset.id);

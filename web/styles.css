@@ -141,6 +141,11 @@ button {
 .tile.info .ic { background: rgba(255,255,255,.06); }
 .tile.lock { border-color: rgba(232, 93, 108, .45); background: linear-gradient(180deg, rgba(232,93,108,.12), rgba(232,93,108,.04)); }
 .tile.x18 .ic { background: rgba(232, 93, 108, .16); }
+.sec-xx { color: #ffb3b8; }
+.tile.xx { border-color: rgba(160, 24, 40, .85); background: linear-gradient(180deg, #241014, #10080b); }
+.tile.xx .ic { background: rgba(120, 16, 28, .55); }
+.tile.lock.xx { border-color: #8f2433; background: linear-gradient(180deg, #2a1016, #12080c); }
+.box-xx { border-color: rgba(160, 24, 40, .8); }
 
 .md { font-size: 16.5px; }
 .md h3 { font-size: 20px; margin: 22px 0 8px; color: #f0d7a4; }
