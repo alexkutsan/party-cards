@@ -216,7 +216,12 @@
     const parts = p.split('/').filter(Boolean);
     const head = parts[0] || '';
     if (!head) return {name: 'home'};
-    if (head === 's' && parts[1]) return {name: 'section', id: dec(parts[1])};
+    if (head === 'game' && parts[1] === 'summa') return {name: 'play', id: 'summa'};
+    if (head === 's' && parts[1]) {
+      const id = dec(parts[1]);
+      if (DATA.sections.some((s) => s.id === id)) return {name: 'section', id};
+      return {name: 'score', key: id};
+    }
     if (head === 'g' && parts[1]) return {name: 'rules', id: dec(parts[1])};
     if (head === 'p' && parts[1]) return {name: 'play', id: dec(parts[1])};
     if (head === 'c' && parts[1]) return {name: 'card', id: dec(parts[1])};
@@ -410,7 +415,8 @@
       }
       s.games.forEach((g) => {
         const n = g.decks.reduce((a, d) => a + d.cards.length, 0);
-        h += `<button type="button" class="tile ${x ? 'x18' : ''}" data-act="go" data-go="g/${g.id}"><div class="ic">${s.icon}</div><div><b>${esc(g.short)}</b><span>${n ? n + ' ' + plural(n, 'карточка', 'карточки', 'карточек') : 'только правила'}</span></div></button>`;
+        const sub = g.mode === 'score' ? '10 наборов · счётчик на телефоне' : (n ? n + ' ' + plural(n, 'карточка', 'карточки', 'карточек') : 'только правила');
+        h += `<button type="button" class="tile ${x ? 'x18' : ''}" data-act="go" data-go="g/${g.id}"><div class="ic">${s.icon}</div><div><b>${esc(g.short)}</b><span>${sub}</span></div></button>`;
       });
     });
     app.innerHTML = h + '</div>';
@@ -434,15 +440,23 @@
     if (g.sec === 'x18') {
       h += `<p><button type="button" class="chip" data-act="go" data-go="s/x18">⚠️ Перед игрой: согласие и сигналы</button></p>`;
     }
-    if (n) h += `<p class="muted">Колоды: ${g.decks.map((d) => esc(d.name) + ' (' + d.cards.length + ')').join(' · ')}</p>`;
+    if (g.mode === 'score') h += '<p class="muted">10 готовых наборов и пул для случайного. На телефоне игрока — счётчик, не текст ответов.</p>';
+    else if (n) h += `<p class="muted">Колоды: ${g.decks.map((d) => esc(d.name) + ' (' + d.cards.length + ')').join(' · ')}</p>`;
     else h += '<p class="muted">В этой игре нет колоды — только правила.</p>';
     h += '</div>';
-    if (n) h += `<div class="cta"><button type="button" class="btn" data-act="go" data-go="p/${g.id}">К карточкам</button></div>`;
+    if (g.mode === 'score' || n) h += `<div class="cta"><button type="button" class="btn" data-act="go" data-go="${g.mode === 'score' ? 'game/summa' : 'p/' + g.id}">${g.mode === 'score' ? 'К игре' : 'К карточкам'}</button></div>`;
     app.innerHTML = h;
     app.dataset.screen = 'rules';
   }
 
   function renderPlay(g) {
+    if (g.mode === 'score') {
+      document.title = g.short;
+      if (window.renderScoreHost) window.renderScoreHost();
+      else app.innerHTML = '<p class="noscript">Не удалось открыть игру.</p>';
+      app.dataset.screen = 'play';
+      return;
+    }
     document.title = g.short;
     const s = st(g);
     const p = pool(g, s);
@@ -559,6 +573,10 @@
     if (route.name === 'section') {
       const s = DATA.sections.find((x) => x.id === route.id);
       if (s) return renderSection(s);
+    }
+    if (route.name === 'score') {
+      if (window.renderScorePlayer) return window.renderScorePlayer(route.key);
+      return renderMissing('Счётчик не загрузился', 'Обновите страницу.');
     }
     if (route.name === 'rules' && GAMES[route.id]) return renderRules(GAMES[route.id]);
     if (route.name === 'play' && GAMES[route.id]) return renderPlay(GAMES[route.id]);
@@ -727,5 +745,10 @@
     else closeSheet();
   });
 
+  window.partyQrSvg = qrSvg;
+  window.partyPublicUrl = publicUrl;
+  window.partyGo = go;
+  window.partyAsk = ask;
+  window.partyEsc = esc;
   render();
 })();

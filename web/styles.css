@@ -418,6 +418,33 @@ a.btn, a.btn:visited { color: var(--tx); }
 .noscript, .miss { padding: 48px 20px; text-align: center; max-width: 36rem; margin: 0 auto; }
 .muted { color: var(--mu); }
 
+.sum-h { font-size: 28px; line-height: 1.15; margin: 8px 0; }
+.sum-q { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.sum-q p { margin: 0; }
+.wbadge { flex: none; min-width: 42px; text-align: center; border-radius: 999px; background: rgba(228, 194, 122, .16); color: var(--gold); padding: 6px 8px; font-size: 16px; }
+.sum-link { color: var(--mu); font-size: 13px; word-break: break-all; text-align: center; }
+.checkline { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; min-height: 44px; }
+.checkline input { width: 22px; height: 22px; margin-top: 2px; flex: none; }
+.stop-list { max-height: 50vh; overflow: auto; }
+.player-row, .better { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.bet-slot { display: flex; gap: 8px; }
+.bet-slot select, select.wide { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--tx); font: inherit; padding: 8px; }
+select.wide { width: 100%; }
+.summa-player { min-height: 100dvh; display: flex; flex-direction: column; }
+.sumhead { position: sticky; top: 0; z-index: 4; display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: calc(var(--safe-top) + 12px) 16px 12px; background: rgba(16, 14, 20, .92); backdrop-filter: blur(12px); }
+.sumhead b { font-size: clamp(48px, 16vw, 84px); line-height: .9; font-weight: 750; }
+.sumhead small, .sumhead span { color: var(--mu); }
+.sum-scroll { padding: 8px 16px 16px; }
+.sum-card { margin: 10px 0; padding: 12px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.sum-card .yn { display: flex; gap: 8px; margin-top: 10px; }
+.sum-card .yn .chip { flex: 1; text-align: center; justify-content: center; }
+.sum-actions { display: flex; gap: 8px; padding: 8px 16px calc(var(--safe-bot) + 12px); }
+.sum-actions .btn { flex: 1; }
+.summa-player.hide-answers .ans { filter: blur(16px); pointer-events: none; user-select: none; }
+.summa-player.hide-sum .sumhead b { filter: blur(18px); }
+.summa-consent { padding-top: 24px; }
+.yn { display: flex; gap: 8px; flex-wrap: wrap; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

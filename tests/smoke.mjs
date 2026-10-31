@@ -158,9 +158,14 @@ async function playGame(game) {
   if (!rulesOk) fail(game.id + ' rules screen is wrong');
   drain(game.id + ' rules');
 
-  await page.locator(`[data-go="p/${game.id}"]`).click();
+  await page.locator(`[data-go="p/${game.id}"], [data-go="game/${game.id}"]`).click();
   await page.locator('[data-screen="play"]').waitFor();
   assertBase(page.url(), game.id + ' play');
+  if (game.mode === 'score') {
+    await assertScore(game);
+    console.log('OK', game.sec, game.id, game.short);
+    return;
+  }
   if (game.mode === 'bandit') {
     for (let i = 0; i < 4; i++) await page.locator('[data-act="players"][data-d="1"]').click();
   }
@@ -294,6 +299,103 @@ async function assertBanditLinks(game) {
   await openCard(new URL(links.neu, ROOT).href, game);
 }
 
+async function assertScore(game) {
+  if (!await page.locator('[data-sum="open-set"]').count()) fail('score host has no sets');
+  const sets = await page.locator('[data-sum="open-set"]').count();
+  if (sets !== 10) fail('expected 10 sets, got ' + sets);
+  const weightsOk = await page.evaluate(() => {
+    const sc = PARTY.score;
+    if (sc.pool.length !== 30) return 'pool ' + sc.pool.length;
+    const tally = {1: 0, 2: 0, 3: 0};
+    sc.pool.forEach((id) => { tally[sc.questions[id].w]++; });
+    if (tally[1] !== 10 || tally[2] !== 10 || tally[3] !== 10) return 'pool weights';
+    for (const set of sc.sets) {
+      const w = set.qs.map((id) => sc.questions[id].w);
+      if (w.join() !== '1,1,2,2,3,3') return 'set ' + set.n;
+    }
+    return '';
+  });
+  if (weightsOk) fail(weightsOk);
+  await page.locator('[data-sum="open-set"]').first().click();
+  await page.locator('#sumQr').waitFor();
+  const cardUrl = await page.locator('#sumQr').getAttribute('data-card-url');
+  const openHref = await page.locator('#sumOpen').getAttribute('href');
+  if (!cardUrl || openHref !== cardUrl) fail('set link ' + openHref + ' != ' + cardUrl);
+  if (!cardUrl.includes('/s/')) fail('set url ' + cardUrl);
+  assertBase(cardUrl, 'summa set');
+  await page.evaluate(() => localStorage.removeItem('summa:consent'));
+  await page.goto(cardUrl, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-screen="score-consent"]').waitFor();
+  if (await page.locator('[data-sum-total]').count()) fail('counter visible before consent');
+  for (const id of ['c1', 'c2', 'c3']) await page.locator(`[data-sum="${id}"]`).check();
+  await page.locator('[data-sum="consent"]').click();
+  await page.locator('[data-screen="score-player"]').waitFor();
+  await page.locator('[data-sum="yes"][data-w="1"]').first().click();
+  await page.locator('[data-sum="yes"][data-w="2"]').first().click();
+  const total = await page.locator('[data-sum-total]').innerText();
+  if (total !== '3') fail('counter total ' + total);
+  await page.locator('[data-sum="hide"]').click();
+  const hidden = await page.locator('.summa-player').evaluate((el) => el.classList.contains('hide-answers'));
+  if (!hidden) fail('hide did not blur answers');
+  await page.locator('[data-sum="reset"]').click();
+  await page.locator('[data-act="ask-yes"]').click();
+  const cleared = await page.locator('[data-sum-total]').innerText();
+  if (cleared !== '0') fail('reset total ' + cleared);
+
+  await page.goto(new URL('game/summa', ROOT).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-sum="random"]').click();
+  await page.locator('#sumQr').waitFor();
+  const randomUrl = await page.locator('#sumQr').getAttribute('data-card-url');
+  const randomOk = await page.evaluate((url) => {
+    const key = new URL(url).pathname.split('/s/')[1];
+    if (!key || !key.startsWith('r.')) return 'not random';
+    const ids = key.slice(2).split('.');
+    if (ids.length !== 6) return 'count ' + ids.length;
+    const ws = ids.map((id) => PARTY.score.questions[id].w).sort((a, b) => a - b);
+    return ws.join() === '1,1,2,2,3,3' ? '' : 'weights ' + ws.join();
+  }, randomUrl);
+  if (randomOk) fail('random set ' + randomOk);
+
+  await page.locator('[data-sum="list"]').click();
+  await page.locator('[data-sum="open-set"]').first().click();
+  await page.locator('[data-sum="bet"]').click();
+  for (const name of ['Борис', 'Вера', 'Аня']) {
+    await page.locator('[data-sum="new-name"]').fill(name);
+    await page.locator('[data-sum="add-player"]').click();
+  }
+  await page.locator('[data-sum="hero"]').selectOption('Борис');
+  await page.locator('[data-sum="announced"]').fill('3');
+  async function bet(name, slot, q, yes) {
+    const box = page.locator(`.bet-slot[data-better="${name}"][data-slot="${slot}"]`);
+    await box.locator('[data-sum="bet-q"]').selectOption(String(q));
+    await box.locator('[data-sum="bet-yes"]').selectOption(yes ? '1' : '0');
+  }
+  await bet('Вера', 0, 1, true);
+  await bet('Вера', 1, 2, false);
+  await bet('Вера', 2, 3, true);
+  await bet('Аня', 0, 1, true);
+  await page.locator('[data-sum="to-reveal"]').click();
+  async function reveal(q, yes) {
+    await page.locator(`[data-sum="rev"][data-q="${q}"][data-yes="${yes ? '1' : '0'}"]`).click();
+  }
+  await reveal(1, true);
+  await reveal(2, false);
+  await reveal(3, true);
+  await page.locator('[data-sum="calc"]').click();
+  await page.locator('[data-player-points="Вера"]').waitFor();
+  const points = await page.evaluate(() => ({
+    b: document.querySelector('[data-player-points="Борис"]').textContent,
+    v: document.querySelector('[data-player-points="Вера"]').textContent,
+    a: document.querySelector('[data-player-points="Аня"]').textContent
+  }));
+  if (points.b !== '0' || points.v !== '6' || points.a !== '2') fail('scores ' + JSON.stringify(points));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('[data-sum="board"]').click();
+  const again = await page.locator('[data-player-points="Вера"]').innerText();
+  if (again !== '6') fail('scoreboard did not persist ' + again);
+  drain('summa');
+}
+
 await openHome();
 const host = new URL(ROOT).hostname;
 if (host !== 'localhost' && host !== '127.0.0.1') {
@@ -307,11 +409,12 @@ if (host !== 'localhost' && host !== '127.0.0.1') {
 const party = await page.evaluate(() => window.PARTY);
 if (!party || party.sections.length !== 3) fail('expected 3 categories');
 const games = gameList(party);
-if (games.length !== 15) fail('expected 15 games, got ' + games.length);
+if (games.length !== 16) fail('expected 16 games, got ' + games.length);
 const adult = games.filter((g) => g.sec === 'x18');
 const rest = games.filter((g) => g.sec !== 'x18');
-if (adult.length !== 5) fail('expected 5 games in Финал 18+');
+if (adult.length !== 6) fail('expected 6 games in Финал 18+');
 if (await page.locator('[data-go="g/x181"]').count()) fail('18+ games are listed before confirmation');
+if (await page.locator('[data-go="g/summa"]').count()) fail('Сумма и ставки is listed before confirmation');
 if (!await page.locator('[data-go="g/deep1"]').count()) fail('first category did not render');
 await passAgeGate(false);
 if (await page.locator('[data-go="g/x181"]').count()) fail('declining 18+ revealed the category');
