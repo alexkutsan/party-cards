@@ -66,6 +66,17 @@ python3 serve.py
 
 Откроется <http://127.0.0.1:8080/party-cards/> — с тем же префиксом, что и на GitHub Pages, и с запасной `404.html` для прямых ссылок на карточки. На локальном адресе service worker по умолчанию выключен, чтобы правки были видны сразу. На `github.io` он включается.
 
+Проверка, что открываются все разделы и игры (правила, QR и прямые ссылки на карточки):
+
+```bash
+npm install
+npx playwright install chromium
+python3 build.py
+python3 serve.py
+```
+
+В другом окне: `node tests/smoke.mjs http://127.0.0.1:8080/party-cards/`. Тот же скрипт запускается в GitHub Actions до публикации. Для уже выложенного сайта: `node tests/smoke.mjs https://alexkutsan.github.io/party-cards/`.
+
 Другой префикс (например, сайт пользователя в корне домена): `BASE_PATH=/ python3 build.py`.
 
 ## GitHub Pages — один ручной шаг

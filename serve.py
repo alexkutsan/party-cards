@@ -65,11 +65,14 @@ class Handler(BaseHTTPRequestHandler):
             ext = Path(rel).suffix.lower()
             # Only real assets 404. Card and combo routes have no file extension
             # (combo parts are joined with "~") and must fall through to the app shell.
+            # The shell is returned as 200. GitHub Pages itself answers these URLs
+            # with 404.html; once the service worker controls the page it rewrites
+            # that response to 200 so the browser does not log a failed document load.
             if ext in TYPES and ext != ".html":
                 self.send_error(404)
                 return
             target = self.directory / "404.html"
-            status = 404
+            status = 200
             if not target.is_file():
                 self.send_error(404)
                 return

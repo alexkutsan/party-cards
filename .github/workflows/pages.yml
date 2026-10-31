@@ -26,10 +26,34 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install smoke-test browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
       - name: Build site
         env:
           BASE_PATH: /party-cards/
         run: python3 build.py
+
+      - name: Smoke test
+        run: |
+          python3 serve.py --port 8080 > /tmp/party-cards-serve.log 2>&1 &
+          echo $! > /tmp/party-cards-serve.pid
+          trap 'kill $(cat /tmp/party-cards-serve.pid) 2>/dev/null || true' EXIT
+          ok=
+          for i in $(seq 1 50); do
+            if curl -sf -o /dev/null http://127.0.0.1:8080/party-cards/; then ok=1; break; fi
+            sleep 0.2
+          done
+          test -n "$ok"
+          node tests/smoke.mjs http://127.0.0.1:8080/party-cards/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

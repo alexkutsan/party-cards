@@ -362,7 +362,7 @@ button {
 #copyLink { max-width: 320px; margin-top: 4px; }
 .sheet-close { flex: none; margin-top: 10px; }
 
-.modal {
+#modal {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -372,22 +372,24 @@ button {
   justify-content: center;
   padding: 16px 16px calc(var(--safe-bot) + 16px);
 }
-.modal[hidden] { display: none !important; }
-.modal .box {
+#modal[hidden] { display: none !important; }
+#modal .box {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 22px;
   padding: 22px 18px 16px;
   max-width: 440px;
   width: 100%;
+  max-height: calc(100dvh - 32px - var(--safe-bot));
+  overflow: auto;
   text-align: center;
   box-shadow: var(--shadow);
 }
-.modal h3 { margin: 0 0 8px; font-size: 24px; }
-.modal p { color: var(--mu); margin: 0 0 16px; }
-.modal .btn + .btn { margin-top: 8px; }
+#modal h3 { margin: 0 0 8px; font-size: 24px; }
+#modal p { color: var(--mu); margin: 0 0 16px; }
+#modal .btn + .btn { margin-top: 8px; }
 @media (min-width: 700px) {
-  .modal { align-items: center; }
+  #modal { align-items: center; }
 }
 
 #toasts { position: fixed; left: 0; right: 0; bottom: calc(var(--safe-bot) + 108px); z-index: 70; display: flex; justify-content: center; pointer-events: none; }

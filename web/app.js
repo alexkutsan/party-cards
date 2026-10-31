@@ -252,6 +252,7 @@
       <button type="button" class="btn" data-act="age-yes">Да, мне есть 18 и я в игре</button>
       <button type="button" class="btn ghost" data-act="age-no">Нет, назад</button>
     </div>`;
+    m.querySelector('[data-act="age-yes"]').focus();
   }
   function ask(title, text, ok, cancel) {
     return new Promise((resolve) => {
