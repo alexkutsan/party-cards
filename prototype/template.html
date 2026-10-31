@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0d14">
+<title>Игры для компании</title>
+<style>
+:root{--bg:#0e0d14;--bg2:#17151f;--card:#201d2b;--line:#2e2a3d;--tx:#eeeaf6;--mu:#9a93ad;--ac:#8b6cff;--ac2:#ff5fa2;--ok:#3ddc97}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;touch-action:manipulation;overscroll-behavior-y:none}
+body{min-height:100vh;min-height:100dvh}
+button,input{font:inherit;color:inherit;touch-action:manipulation}
+button{cursor:pointer;border:0;background:none;user-select:none;-webkit-user-select:none}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:rgba(14,13,20,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);min-height:56px}
+.top h1{font-size:18px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:44px;height:44px;border-radius:12px;font-size:24px;background:var(--bg2)}
+.wrap{padding:16px 16px calc(env(safe-area-inset-bottom) + 110px);max-width:680px;margin:0 auto}
+.hero{padding:10px 4px 6px}.hero h2{font-size:28px;margin:0 0 4px;line-height:1.15}.hero p{color:var(--mu);margin:0}
+.sec{margin:22px 0 8px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px}
+.sec small{color:var(--mu);font-weight:400;font-size:14px}
+.tile{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px;margin:8px 0;border-radius:18px;background:linear-gradient(135deg,var(--card),var(--bg2));border:1px solid var(--line);min-height:64px;transition:transform .12s}
+.tile:active{transform:scale(.98)}
+.tile .ic{font-size:26px;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(139,108,255,.15);flex:none}
+.tile b{display:block;font-size:17px}.tile span{color:var(--mu);font-size:14px}
+.tile.info .ic{background:rgba(255,255,255,.06)}
+.tile.lock{border-color:#5a2741;background:linear-gradient(135deg,#2a1622,#1a121a)}
+.x18 .ic{background:rgba(255,95,162,.18)}
+.md{font-size:16.5px}.md h3{font-size:19px;margin:22px 0 6px;color:#cbbcff}.md h4{margin:18px 0 6px}
+.md p{margin:10px 0}.md ul,.md ol{padding-left:22px;margin:8px 0}.md li{margin:6px 0}
+.md blockquote{margin:12px 0;padding:10px 14px;border-left:4px solid var(--ac2);background:rgba(255,95,162,.08);border-radius:0 12px 12px 0}
+.md hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+.md strong{color:#fff}.md em{color:#d9d2ea}
+.md .tw{overflow-x:auto;margin:12px 0}.md table{border-collapse:collapse;font-size:14.5px;min-width:100%}
+.md th,.md td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}.md th{background:var(--bg2)}
+.cta{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);background:linear-gradient(transparent,var(--bg) 35%);z-index:6}
+.btn{display:block;width:100%;max-width:648px;margin:0 auto;padding:18px;border-radius:18px;font-size:19px;font-weight:700;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;box-shadow:0 10px 30px rgba(139,108,255,.35);transition:transform .12s}
+.btn:active{transform:scale(.97)}
+.btn.sec2{background:var(--card);box-shadow:none;border:1px solid var(--line);font-size:16px;padding:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.chip{padding:10px 14px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);font-size:15px;min-height:44px;text-align:left}
+.chip.on{background:rgba(139,108,255,.22);border-color:var(--ac);color:#fff}
+.lbl{color:var(--mu);font-size:13px;text-transform:uppercase;letter-spacing:.06em;margin-top:16px}
+.drawzone{display:flex;flex-direction:column;align-items:center;gap:16px;margin:24px 0 10px}
+.deckpile{position:relative;width:190px;height:260px}
+.deckpile i{position:absolute;inset:0;border-radius:20px;background:linear-gradient(145deg,#3a2c78,#7a2d5c);border:2px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.deckpile i:nth-child(1){transform:rotate(-6deg) translate(-6px,4px);opacity:.6}.deckpile i:nth-child(2){transform:rotate(4deg) translate(5px,2px);opacity:.8}
+.deckpile i:nth-child(3){display:grid;place-items:center;font-size:56px}
+.bigdraw{width:100%;padding:24px;font-size:22px}
+.count{color:var(--mu);font-size:15px;text-align:center}
+.count b{color:var(--tx);font-size:20px}
+.row{display:flex;gap:10px;margin-top:10px}.row .btn{flex:1}
+.num{width:90px;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;text-align:center}
+/* overlay */
+#ov{position:fixed;inset:0;z-index:50;background:rgba(5,4,10,.96);display:none;flex-direction:column;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px);perspective:1400px}
+#ov.show{display:flex}
+.flip{flex:1;position:relative;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.8,.2,1);transform:rotateY(180deg) scale(.92)}
+#ov.open .flip{transform:rotateY(0) scale(1)}
+.face{position:absolute;inset:0;border-radius:26px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;overflow:hidden}
+.front{background:linear-gradient(160deg,#272238,#1a1726);border:2px solid #3b3452;padding:22px 20px}
+.backf{transform:rotateY(180deg);background:linear-gradient(145deg,#3a2c78,#7a2d5c);display:grid;place-items:center;font-size:80px;border:2px solid rgba(255,255,255,.15)}
+.cmeta{display:flex;justify-content:space-between;color:var(--mu);font-size:14px;gap:10px}
+.cbody{flex:1;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:10px 0}
+.ctext{font-size:clamp(24px,7.2vw,40px);line-height:1.3;font-weight:650;text-align:center;word-wrap:break-word}
+.ctext.long{font-size:clamp(20px,5.8vw,30px)}
+.slot{margin:10px 0;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);text-align:left}
+.slot small{display:block;color:var(--mu);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.slot div{font-size:clamp(20px,6vw,30px);font-weight:650;line-height:1.25}
+.closebtn{margin-top:14px}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;max-width:420px;width:100%;text-align:center}
+.modal h3{margin:0 0 8px;font-size:24px}.modal p{color:var(--mu)}
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#2b2640;padding:10px 16px;border-radius:12px;z-index:70;font-size:15px}
+.muted{color:var(--mu);font-size:14px}
+</style></head><body>
+<div id="app"></div>
+<div id="ov"><div class="flip"><div class="face front" id="cf"></div><div class="face backf">🂠</div></div>
+<button class="btn closebtn" id="closeCard">Закрыть / передать следующему</button></div>
+<script>
+const DATA=/*__DATA__*/null;
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LVN={'🟢':'мягко','🟡':'средне','🔴':'остро','🔥':'откровенно','💞':'групповое'};
+// --- markdown ---
+function inl(s){s=esc(s);return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g,'$1<em>$2</em>').replace(/`(.+?)`/g,'<code>$1</code>')}
+function md(src){
+ const L=src.split('\n');let h='',i=0;
+ while(i<L.length){let l=L[i];
+  if(!l.trim()){i++;continue}
+  if(/^---+\s*$/.test(l)){h+='<hr>';i++;continue}
+  let m=l.match(/^(#{1,6})\s+(.*)/);if(m){const n=Math.min(4,Math.max(3,m[1].length));h+=`<h${n}>${inl(m[2])}</h${n}>`;i++;continue}
+  if(l.startsWith('>')){let b=[];while(i<L.length&&L[i].startsWith('>')){b.push(L[i].replace(/^>\s?/,''));i++}h+='<blockquote>'+md(b.join('\n'))+'</blockquote>';continue}
+  if(l.startsWith('|')){let r=[];while(i<L.length&&L[i].startsWith('|')){r.push(L[i]);i++}
+   const cells=x=>x.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+   let t='<div class="tw"><table>';r.forEach((x,k)=>{if(/^\|?\s*:?-+/.test(x.replace(/\|/g,'').trim()?x:'')&&/^[\s|:-]+$/.test(x))return;const tg=k==0?'th':'td';t+='<tr>'+cells(x).map(c=>`<${tg}>${inl(c)}</${tg}>`).join('')+'</tr>'});h+=t+'</table></div>';continue}
+  if(/^\s*([-*]|\d+\.)\s/.test(l)){let b=[];while(i<L.length&&(/^\s*([-*]|\d+\.)\s/.test(L[i])||(/^\s{2,}\S/.test(L[i]))))
+   {b.push(L[i]);i++}h+=list(b);continue}
+  let p=[];while(i<L.length&&L[i].trim()&&!/^(#|>|\||---|\s*([-*]|\d+\.)\s)/.test(L[i])){p.push(L[i]);i++}
+  h+='<p>'+inl(p.join(' '))+'</p>';}
+ return h}
+function list(b){const ind=b[0].match(/^\s*/)[0].length;const ol=/^\s*\d+\./.test(b[0]);let h=ol?'<ol>':'<ul>',cur=null,sub=[];
+ const flush=()=>{if(cur!==null){h+='<li>'+inl(cur)+(sub.length?list(sub):'')+'</li>'}sub=[]};
+ for(const l of b){const n=l.match(/^\s*/)[0].length;if(n<=ind&&/^\s*([-*]|\d+\.)\s/.test(l)){flush();cur=l.replace(/^\s*([-*]|\d+\.)\s+/,'')}else if(/^\s*([-*]|\d+\.)\s/.test(l))sub.push(l);else cur+=' '+l.trim()}
+ flush();if(ol){const s=b[0].match(/\d+/)[0];if(s!='1')h=h.replace('<ol>',`<ol start="${s}">`)}return h+(ol?'</ol>':'</ul>')}
+// --- state ---
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem('pg_'+k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem('pg_'+k,JSON.stringify(v))}catch(e){}}};
+const GAMES={};DATA.forEach(s=>s.games.forEach((g,gi)=>{g.sec=s;g.decks.forEach((d,di)=>d.cards.forEach(c=>{c.uid=di+':'+c.n;c.deck=d.name}));GAMES[g.id]=g}));
+const ageOK=()=>sessionStorage.getItem('age18')==='1';
+function go(h){location.hash=h}
+function bar(title,back){return `<div class="top">${back!==null?`<button class="back" onclick="history.length>1?history.back():go('${back}')" aria-label="Назад">‹</button>`:''}<h1>${esc(title)}</h1></div>`}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
+// --- views ---
+function home(){let h=bar('Игры для компании',null)+'<div class="wrap"><div class="hero"><h2>Во что играем?</h2><p>Карточки прямо на телефоне — передавайте его по кругу.</p></div>';
+ DATA.forEach(s=>{const x=s.id==='x18';h+=`<div class="sec">${s.icon} ${esc(s.title)} <small>${s.games.length} игр</small></div>`;
+  if(x&&!ageOK()){h+=`<button class="tile lock" onclick="gate()"><div class="ic">🔞</div><div><b>Только для взрослых</b><span>Нажмите, чтобы подтвердить 18+</span></div></button>`;return}
+  if(s.intro||s.info.length||s.before)h+=`<button class="tile info" onclick="go('#/s/${s.id}')"><div class="ic">${x?'⚠️':'📖'}</div><div><b>${x?'Перед игрой':'Как пользоваться'}</b><span>${x?'согласие, калибровка, сигналы':'вступление и сценарий вечера'}</span></div></button>`;
+  s.games.forEach(g=>{const n=g.decks.reduce((a,d)=>a+d.cards.length,0);h+=`<button class="tile ${x?'x18':''}" onclick="go('#/g/${g.id}')"><div class="ic">${s.icon}</div><div><b>${esc(g.short)}</b><span>${n?n+' карточек':'только правила'}</span></div></button>`});});
+ app.innerHTML=h+'</div>'}
+function gate(){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><h3>🔞 Вам есть 18?</h3><p>Раздел для взрослых, которые заранее и добровольно договорились об откровенной игре.</p><button class="btn" id="y">Да, мне 18+ и я в игре</button><div style="height:10px"></div><button class="btn sec2" id="n">Нет, назад</button></div>`;document.body.appendChild(m);
+ m.querySelector('#y').onclick=()=>{sessionStorage.setItem('age18','1');m.remove();route()};m.querySelector('#n').onclick=()=>m.remove()}
+function secPage(s){let h=bar(s.id==='x18'?'Перед игрой':s.title,'#/')+'<div class="wrap md">';
+ h+=`<h3>${esc(s.full)}</h3>`+md(s.intro);if(s.before)h+=`<h3>${esc(s.before.title)}</h3>`+md(s.before.md);
+ s.info.forEach(i=>h+=`<hr><h3>${esc(i.title)}</h3>`+md(i.md));app.innerHTML=h+'</div>';scrollTo(0,0)}
+function rules(g){const n=g.decks.reduce((a,d)=>a+d.cards.length,0);let h=bar(g.short,'#/')+`<div class="wrap md"><h3 style="margin-top:4px">${esc(g.title)}</h3>`+md(g.rules);
+ if(g.sec.id==='x18')h+=`<p><button class="chip" onclick="go('#/s/x18')">⚠️ Перед игрой: согласие и сигналы</button></p>`;
+ if(n)h+=`<p class="muted">Колоды: ${g.decks.map(d=>esc(d.name)+' ('+d.cards.length+')').join(' · ')}</p>`;else h+='<p class="muted">В этой игре нет колоды — только правила.</p>';
+ h+='</div>';if(n)h+=`<div class="cta"><button class="btn" onclick="go('#/c/${g.id}')">К карточкам →</button></div>`;app.innerHTML=h;scrollTo(0,0)}
+// card pools
+function st(g){return LS.get('g_'+g.id,null)||{drawn:[],decks:g.mode==='bandit'?['bandit']:[0],levels:null,players:0}}
+function save(g,s){LS.set('g_'+g.id,s)}
+function levelsOf(cards){return [...new Set(cards.map(c=>c.l).filter(Boolean))].sort((a,b)=>'🟢🟡🔴🔥💞'.indexOf(a)-'🟢🟡🔴🔥💞'.indexOf(b))}
+function pool(g,s){let c;if(g.mode==='bandit'){if(s.decks[0]==='wheel')c=g.decks.filter(d=>d.name.startsWith('Колесо')).flatMap(d=>d.cards);else c=g.decks.filter(d=>d.name.startsWith('Бандит — Что')).flatMap(d=>d.cards)}
+ else c=s.decks.flatMap(i=>g.decks[i]?g.decks[i].cards:[]);
+ const lv=levelsOf(c);if(s.levels&&lv.length>1)c=c.filter(x=>!x.l||s.levels.includes(x.l));return {all:c,lv}}
+function cards(g){const s=st(g),p=pool(g,s),left=p.all.filter(c=>!s.drawn.includes(c.uid));
+ let h=bar(g.short,'#/g/'+g.id)+'<div class="wrap">';
+ if(g.mode==='bandit'){h+='<div class="lbl">Режим</div><div class="chips">'+[['bandit','🎰 Однорукий бандит'],['wheel','🎡 Колесо желаний']].map(([k,t])=>`<button class="chip ${s.decks[0]===k?'on':''}" onclick="setDeck('${g.id}','${k}')">${t}</button>`).join('')+'</div>';
+  if(s.decks[0]==='bandit')h+=`<div class="lbl">Кто → Кому (необязательно)</div><div class="chips" style="align-items:center">Игроков: <input class="num" type="number" inputmode="numeric" min="0" max="40" value="${s.players||''}" placeholder="выкл" onchange="setPlayers('${g.id}',this.value)"><span class="muted">0 / пусто — без номеров</span></div>`}
+ else if(g.decks.length>1){h+='<div class="lbl">Колоды (можно несколько)</div><div class="chips">'+g.decks.map((d,i)=>`<button class="chip ${s.decks.includes(i)?'on':''}" onclick="togDeck('${g.id}',${i})">${esc(d.name.replace(/^[^—]*—\s*/,''))} · ${d.cards.length}</button>`).join('')+'</div>'}
+ if(p.lv.length>1){const on=s.levels||p.lv;h+='<div class="lbl">Уровни</div><div class="chips">'+p.lv.map(l=>`<button class="chip ${on.includes(l)?'on':''}" onclick="togLv('${g.id}','${l}')">${l} ${LVN[l]}</button>`).join('')+'</div>'}
+ h+=`<div class="drawzone"><div class="deckpile"><i></i><i></i><i>${g.sec.icon}</i></div><div class="count">Осталось <b>${left.length}</b> из ${p.all.length}</div></div>`;
+ h+=`<div class="row"><button class="btn sec2" onclick="resetG('${g.id}')">↺ Сбросить колоду</button><button class="btn sec2" onclick="go('#/g/${g.id}')">📖 Правила</button></div></div>`;
+ h+=`<div class="cta"><button class="btn bigdraw" onclick="draw('${g.id}')">${left.length||!p.all.length?'Взять карточку':'Перемешать и начать заново'}</button></div>`;app.innerHTML=h}
+function upd(id,f){const g=GAMES[id],s=st(g);f(s,g);save(g,s);cards(g)}
+function setDeck(id,k){upd(id,s=>{s.decks=[k];s.levels=null})}
+function togDeck(id,i){upd(id,s=>{if(s.decks.includes(i)){if(s.decks.length>1)s.decks=s.decks.filter(x=>x!==i)}else s.decks.push(i);s.decks.sort();s.levels=null})}
+function togLv(id,l){upd(id,(s,g)=>{const p=pool(g,{...s,levels:null});let on=s.levels||p.lv.slice();if(on.includes(l)){if(on.length>1)on=on.filter(x=>x!==l)}else on.push(l);s.levels=on})}
+function setPlayers(id,v){upd(id,s=>{s.players=Math.max(0,Math.min(40,parseInt(v)||0))})}
+function resetG(id){if(!confirm('Сбросить колоду? Все карточки вернутся.'))return;upd(id,s=>{s.drawn=[]});toast('Колода перемешана')}
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function draw(id){const g=GAMES[id],s=st(g),p=pool(g,s);if(!p.all.length){toast('Выберите колоду');return}
+ let left=p.all.filter(c=>!s.drawn.includes(c.uid));
+ if(!left.length){if(!confirm('Колода закончилась. Перемешать заново?'))return;const ids=p.all.map(c=>c.uid);s.drawn=s.drawn.filter(u=>!ids.includes(u));save(g,s);cards(g);toast('Перемешано');return}
+ const c=rnd(left);s.drawn.push(c.uid);save(g,s);
+ let body,meta=`<span>${esc(c.deck)}</span><span>№${c.n}${c.l?' '+c.l:''}</span>`;
+ if(g.mode==='bandit'&&s.decks[0]==='bandit'){const by=n=>g.decks.find(d=>d.name.startsWith(n)).cards;let who='';
+  if(s.players>=2){const a=1+Math.floor(Math.random()*s.players);let b;do{b=1+Math.floor(Math.random()*s.players)}while(b===a);who=`<div class="slot"><small>Кто → Кому</small><div>Игрок ${a} → игрок ${b}</div></div>`}
+  body=who+`<div class="slot"><small>Что ${c.l}</small><div>${esc(c.t)}</div></div><div class="slot"><small>Где</small><div>${esc(rnd(by('Бандит — Где')).t)}</div></div><div class="slot"><small>Как и сколько</small><div>${esc(rnd(by('Бандит — Как')).t)}</div></div><p class="muted" style="text-align:center">Только после «да» обоих</p>`;meta=`<span>🎰 Однорукий бандит</span><span>${c.l}</span>`}
+ else body=`<div class="ctext ${c.t.length>110?'long':''}">${esc(c.t)}</div>`;
+ $('#cf').innerHTML=`<div class="cmeta">${meta}</div><div class="cbody">${body}</div><div class="cmeta"><span>${esc(g.short)}</span><span>осталось ${left.length-1}</span></div>`;
+ const ov=$('#ov');ov.classList.remove('open');ov.classList.add('show');requestAnimationFrame(()=>requestAnimationFrame(()=>ov.classList.add('open')));history.pushState({card:1},'',location.hash);cards(g)}
+function hideCard(){const ov=$('#ov');ov.classList.remove('open','show');$('#cf').innerHTML=''}
+$('#closeCard').onclick=()=>{if(history.state&&history.state.card)history.back();else hideCard()};
+function route(){hideCard();const h=location.hash.slice(1).split('/');const g=GAMES[h[2]];
+ if(h[1]==='s'){const s=DATA.find(x=>x.id===h[2]);if(s&&(s.id!=='x18'||ageOK()))return secPage(s)}
+ if(g&&g.sec.id==='x18'&&!ageOK()){home();return gate()}
+ if(h[1]==='g'&&g)return rules(g);if(h[1]==='c'&&g)return cards(g);home()}
+window.addEventListener('popstate',()=>{if($('#ov').classList.contains('show')&&!(history.state&&history.state.card)){hideCard()}});
+window.addEventListener('hashchange',route);
+document.addEventListener('gesturestart',e=>e.preventDefault());
+let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<300&&!e.target.closest('input'))e.preventDefault();lt=n},{passive:false});
+route();
+</script></body></html>
