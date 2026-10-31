@@ -188,6 +188,17 @@
     return name.replace(/^[^—]*—\s*/, '');
   }
   function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  // Card 90 of «Бутылочка 18+» ends the game. New cards were appended after it
+  // in the source, so the draw holds it until every other card in the current
+  // selection has been taken. The card's id stays the hash of deck + number 90.
+  function isBottleFinale(card) {
+    return !!(card && card.d === 'Бутылочка 18+' && String(card.t).includes('**Финальная:**'));
+  }
+  function cardsForDraw(left) {
+    if (left.length <= 1) return left;
+    const open = left.filter((c) => !isBottleFinale(c));
+    return open.length ? open : left;
+  }
 
   function baseHref() { return document.querySelector('base').href; }
   function routeUrl(route) {
@@ -466,7 +477,8 @@
       });
       h += '</div>';
     }
-    h += `<div class="drawzone"><div class="deckpile" aria-hidden="true"><i></i><i></i><i>${g.icon || '🂠'}</i></div><div class="count">Осталось <b>${left.length}</b> из ${p.cards.length}</div><p class="help">Ведущий не видит текст — только код.</p></div>`;
+    const finaleHeld = left.some(isBottleFinale) && left.some((c) => !isBottleFinale(c));
+    h += `<div class="drawzone"><div class="deckpile" aria-hidden="true"><i></i><i></i><i>${g.icon || '🂠'}</i></div><div class="count">Осталось <b>${left.length}</b> из ${p.cards.length}</div><p class="help">Ведущий не видит текст — только код.</p>${finaleHeld ? '<p class="help">«Финальная» выпадает последней: по ней эта игра заканчивается.</p>' : ''}</div>`;
     h += `<div class="row"><button type="button" class="btn sec2" data-act="reset" data-id="${g.id}">Сбросить колоду</button><button type="button" class="btn sec2" data-act="go" data-go="g/${g.id}">Правила</button></div></div>`;
     let cta = '';
     if (s.last && s.last.url) {
@@ -594,7 +606,7 @@
       toast('Колода перемешана');
       return;
     }
-    const card = rnd(left);
+    const card = rnd(cardsForDraw(left));
     s.drawn.push(card.id);
     let route;
     if (g.mode === 'bandit' && s.bandit === 'bandit') {

@@ -226,7 +226,72 @@ async function playGame(game) {
   for (const id of sampleIds(game, 3)) {
     await openCard(new URL('c/' + id, ROOT).href, game);
   }
+  if (game.id === 'x182') await assertBottleFinale();
   console.log('OK', game.sec, game.id, game.short);
+}
+
+async function assertBottleFinale() {
+  const finaleId = await page.evaluate(() => {
+    const g = PARTY.sections.flatMap((s) => s.games).find((x) => x.id === 'x182');
+    const ids = g.decks.flatMap((d) => d.cards);
+    const finale = ids.filter((id) => PARTY.cards[id].t.includes('**Финальная:**'));
+    if (finale.length !== 1 || PARTY.cards[finale[0]].n !== 90) return '';
+    const other = ids.find((id) => id !== finale[0]);
+    localStorage.setItem('pc1_x182', JSON.stringify({
+      drawn: ids.filter((id) => id !== finale[0] && id !== other),
+      decks: [0],
+      levels: null,
+      last: null
+    }));
+    return finale[0];
+  });
+  if (!finaleId) fail('bottle finale card missing or renumbered');
+  await page.goto(new URL('p/x182', ROOT).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-screen="play"]').waitFor();
+  await page.locator('[data-act="draw"]').click();
+  await page.locator('#sheet:not([hidden])').waitFor();
+  const mid = await page.locator('#qr').getAttribute('data-card-url');
+  if (mid.includes(finaleId)) fail('Финальная was drawn while another bottle card remained');
+  await page.evaluate((fid) => {
+    const ids = PARTY.sections.flatMap((s) => s.games).find((x) => x.id === 'x182').decks.flatMap((d) => d.cards);
+    localStorage.setItem('pc1_x182', JSON.stringify({
+      drawn: ids.filter((id) => id !== fid),
+      decks: [0],
+      levels: null,
+      last: null
+    }));
+  }, finaleId);
+  await page.goto(new URL('p/x182', ROOT).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-act="draw"]').click();
+  await page.locator('#sheet:not([hidden])').waitFor();
+  const last = await page.locator('#qr').getAttribute('data-card-url');
+  if (!last.endsWith('/c/' + finaleId) && !last.includes('/c/' + finaleId)) fail('Финальная was not drawn when it was the last card');
+  drain('bottle finale');
+}
+
+async function assertBanditLinks(game) {
+  const links = await page.evaluate(() => {
+    const g = PARTY.sections.flatMap((s) => s.games).find((x) => x.mode === 'bandit');
+    const cards = (prefix) => g.decks.filter((d) => d.name.startsWith(prefix)).flatMap((d) => d.cards.map((id) => PARTY.cards[id]));
+    const what = cards('Бандит — Что');
+    const where = cards('Бандит — Где');
+    const how = cards('Бандит — Как');
+    const pick = (list, pred) => list.find(pred);
+    const oldWhat = pick(what, (c) => c.n === 1);
+    const newWhat = pick(what, (c) => c.n === 96);
+    const oldWhere = pick(where, (c) => c.n < 96);
+    const newWhere = pick(where, (c) => c.n >= 126);
+    const oldHow = pick(how, (c) => c.n < 96);
+    const newHow = pick(how, (c) => c.n >= 134);
+    if (!oldWhat || !newWhat || !oldWhere || !newWhere || !oldHow || !newHow) return null;
+    return {
+      old: `m/${oldWhat.id}~${oldWhere.id}~${oldHow.id}`,
+      neu: `m/${newWhat.id}~${newWhere.id}~${newHow.id}~2-5`
+    };
+  });
+  if (!links) fail('could not build bandit combination samples');
+  await openCard(new URL(links.old, ROOT).href, game);
+  await openCard(new URL(links.neu, ROOT).href, game);
 }
 
 await openHome();
@@ -253,6 +318,7 @@ if (await page.locator('[data-go="g/x181"]').count()) fail('declining 18+ reveal
 
 for (const game of rest) await playGame(game);
 for (const game of adult) await playGame(game);
+await assertBanditLinks(adult.find((g) => g.id === 'x185'));
 
 drain('end');
 await browser.close();
