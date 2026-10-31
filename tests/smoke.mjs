@@ -42,10 +42,15 @@ const page = await browser.newPage({
   userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 });
 page.setDefaultTimeout(20000);
-page.on('pageerror', (err) => errors.push('pageerror: ' + err.message));
-page.on('console', (msg) => {
-  if (msg.type() === 'error') errors.push('console: ' + msg.text());
-});
+function watch(p) {
+  p.on('pageerror', (err) => errors.push('pageerror: ' + err.message));
+  p.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push('console: ' + msg.text());
+  });
+}
+watch(page);
+page.context().on('page', watch);
+const openedTabFor = new Set();
 
 function assertBase(url, where) {
   const path = new URL(url).pathname;
@@ -180,6 +185,41 @@ async function playGame(game) {
   }, cardUrl);
   if (leaked) fail(game.id + ' host screen shows card text');
   if (game.mode === 'bandit' && !cardUrl.includes('/m/')) fail(game.id + ' bandit QR is not a combination link');
+  const openTab = page.locator('#openTab');
+  const openHref = await openTab.getAttribute('href');
+  if (openHref !== cardUrl) fail(game.id + ' open-tab href ' + openHref + ' != ' + cardUrl);
+  if (await openTab.getAttribute('target') !== '_blank') fail(game.id + ' open-tab target');
+  const rel = (await openTab.getAttribute('rel') || '').split(/\s+/);
+  if (!rel.includes('noopener')) fail(game.id + ' open-tab rel');
+  const wantTab = !openedTabFor.has(game.sec) || (cardUrl.includes('/m/') && !openedTabFor.has('m'));
+  if (wantTab) {
+    const popupPromise = page.context().waitForEvent('page');
+    await openTab.click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState('domcontentloaded');
+    await popup.locator('[data-screen="card"], [data-screen="combo"]').waitFor();
+    const same = new URL(popup.url()).href.split('#')[0] === new URL(cardUrl).href.split('#')[0];
+    if (!same) fail(game.id + ' new tab opened ' + popup.url() + ' instead of ' + cardUrl);
+    const loaded = await popup.evaluate(() => {
+      const screen = document.getElementById('app').dataset.screen;
+      const path = location.pathname;
+      if (screen === 'card') {
+        const id = decodeURIComponent(path.split('/c/')[1] || '');
+        return document.querySelector('.ctext')?.textContent === PARTY.cards[id]?.t;
+      }
+      if (screen === 'combo') {
+        const ids = decodeURIComponent(path.split('/m/')[1] || '').split('~').slice(0, 3);
+        const slots = [...document.querySelectorAll('.slot div')].map((el) => el.textContent);
+        return ids.every((id) => PARTY.cards[id] && slots.includes(PARTY.cards[id].t));
+      }
+      return false;
+    });
+    if (!loaded) fail(game.id + ' new tab did not show the card');
+    await popup.close();
+    openedTabFor.add(game.sec);
+    if (cardUrl.includes('/m/')) openedTabFor.add('m');
+    drain(game.id + ' new tab');
+  }
   drain(game.id + ' QR');
 
   await openCard(cardUrl, game);

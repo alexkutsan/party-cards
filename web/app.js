@@ -286,6 +286,7 @@
     const qr = $('#qr');
     qr.innerHTML = qrSvg(url);
     qr.dataset.cardUrl = url;
+    $('#openTab').href = url;
     document.body.classList.add('noscroll');
     app.inert = true;
     lockWake();
@@ -296,6 +297,7 @@
     sheet.hidden = true;
     $('#qr').innerHTML = '';
     $('#qr').dataset.cardUrl = '';
+    $('#openTab').removeAttribute('href');
     document.body.classList.remove('noscroll');
     app.inert = false;
     unlockWake();
