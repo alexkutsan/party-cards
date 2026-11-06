@@ -48,7 +48,22 @@ if ('serviceWorker' in navigator) {
   var force = location.search.indexOf('sw=1') !== -1;
   if (!local || force) {
     var root = document.querySelector('base').href;
-    navigator.serviceWorker.register(new URL('sw.js?v=__HASH__', root).href).catch(function () {});
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloading = false;
+    if (hadController) {
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (reloading || !navigator.serviceWorker.controller) return;
+        reloading = true;
+        location.reload();
+      });
+    }
+    navigator.serviceWorker.register(new URL('sw.js?v=__HASH__', root).href, {updateViaCache: 'none'}).then(function (reg) {
+      function check() { reg.update().catch(function () {}); }
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') check();
+      });
+      check();
+    }).catch(function () {});
   }
 }
 </script>
