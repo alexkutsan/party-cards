@@ -313,6 +313,48 @@ async function assertBanditLinks(game) {
   await openCard(new URL(links.neu, ROOT).href, game);
 }
 
+async function deckOf(cardUrl) {
+  return page.evaluate((u) => {
+    const id = decodeURIComponent(new URL(u, location.href).pathname.split('/c/')[1] || '');
+    return PARTY.cards[id] ? PARTY.cards[id].d : '';
+  }, cardUrl);
+}
+
+async function assertTruthDare(game) {
+  if (!game) fail('Правда или действие 18+ missing');
+  const truth = game.decks.find((d) => d.name.includes('Правда'));
+  const dare = game.decks.find((d) => d.name.includes('Действие'));
+  if (!truth || !dare) fail('truth/dare decks missing');
+  if (truth.cards.length < 100) fail('truth cards ' + truth.cards.length);
+  if (dare.cards.length < 80) fail('dare cards ' + dare.cards.length);
+  await openHome();
+  if (await page.locator('[data-act="gate"]').count()) await passAgeGate(true, 'x18');
+  await page.locator(`[data-go="g/${game.id}"]`).click();
+  await page.locator(`[data-go="p/${game.id}"]`).click();
+  await page.locator('[data-screen="play"]').waitFor();
+  const chips = await page.locator('[data-act="deck"]').allInnerTexts();
+  if (!chips.some((t) => t.includes('Правда')) || !chips.some((t) => t.includes('Действие'))) {
+    fail('truth/dare chips ' + chips.join(' | '));
+  }
+  await page.locator('[data-act="draw"]').click();
+  await page.locator('#sheet:not([hidden])').waitFor();
+  const truthUrl = await page.locator('#qr').getAttribute('data-card-url');
+  const truthDeck = await deckOf(truthUrl);
+  if (!truthDeck.includes('Правда')) fail('first draw was ' + truthDeck);
+  await page.locator('#closeSheet').click();
+  await page.locator('#sheet').waitFor({ state: 'hidden' });
+  await page.locator('[data-act="deck"][data-i="1"]').click();
+  await page.locator('[data-act="deck"][data-i="0"]').click();
+  await page.locator('[data-act="draw"]').click();
+  await page.locator('#sheet:not([hidden])').waitFor();
+  const dareUrl = await page.locator('#qr').getAttribute('data-card-url');
+  const dareDeck = await deckOf(dareUrl);
+  if (!dareDeck.includes('Действие')) fail('second draw was ' + dareDeck);
+  if (dareUrl === truthUrl) fail('dare draw repeated the truth card');
+  await openCard(dareUrl, game);
+  console.log('OK', game.sec, game.id, 'both decks', truth.cards.length, dare.cards.length);
+}
+
 async function assertScore(game) {
   if (!await page.locator('[data-sum="open-set"]').count()) fail('score host has no sets');
   const sets = await page.locator('[data-sum="open-set"]').count();
@@ -424,11 +466,11 @@ if (host !== 'localhost' && host !== '127.0.0.1') {
 const party = await page.evaluate(() => window.PARTY);
 if (!party || party.sections.length !== 4) fail('expected 4 categories');
 const games = gameList(party);
-if (games.length !== 21) fail('expected 21 games, got ' + games.length);
+if (games.length !== 22) fail('expected 22 games, got ' + games.length);
 const x18 = games.filter((g) => g.sec === 'x18');
 const extreme = games.filter((g) => g.sec === 'xx');
 const rest = games.filter((g) => g.sec !== 'x18' && g.sec !== 'xx');
-if (x18.length !== 6) fail('expected 6 games in Финал 18+');
+if (x18.length !== 7) fail('expected 7 games in Финал 18+');
 if (extreme.length !== 5) fail('expected 5 Extreme games, got ' + extreme.length);
 if (await page.locator('[data-go="g/x181"]').count()) fail('18+ games are listed before confirmation');
 if (await page.locator('[data-go="g/summa"]').count()) fail('Сумма и ставки is listed before confirmation');
@@ -440,6 +482,7 @@ if (await page.locator('[data-go="g/x181"]').count()) fail('declining 18+ reveal
 
 for (const game of rest) await playGame(game);
 for (const game of x18) await playGame(game);
+await assertTruthDare(x18.find((g) => g.short === 'Правда или действие 18+'));
 await openHome();
 if (await page.locator('[data-go="g/xx1"]').count()) fail('Extreme opened with only the 18+ gate');
 await passAgeGate(false, 'xx');
